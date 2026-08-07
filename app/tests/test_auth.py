@@ -59,8 +59,16 @@ def create_payload(role_name: str, email: str, staff_id: str) -> dict[str, str]:
     }
 
 
+def bootstrap_secret_header(value: str | None = None) -> dict[str, str]:
+    return {"X-Bootstrap-Secret": value or settings.bootstrap_secret}
+
+
 def bootstrap_admin() -> dict[str, str]:
-    response = client.post("/auth/bootstrap", json=admin_payload())
+    response = client.post(
+        "/auth/bootstrap",
+        json=admin_payload(),
+        headers=bootstrap_secret_header(),
+    )
     assert response.status_code == 201
     return login("admin@silentsepsis.test", "StrongPass123")
 
@@ -90,7 +98,11 @@ def create_user_as_admin(role_name: str, email: str, staff_id: str) -> dict[str,
 
 
 def test_bootstrap_first_admin() -> None:
-    response = client.post("/auth/bootstrap", json=admin_payload())
+    response = client.post(
+        "/auth/bootstrap",
+        json=admin_payload(),
+        headers=bootstrap_secret_header(),
+    )
 
     assert response.status_code == 201
     body = response.json()
@@ -101,10 +113,60 @@ def test_bootstrap_first_admin() -> None:
 
 
 def test_bootstrap_rejected_after_admin_exists() -> None:
-    first = client.post("/auth/bootstrap", json=admin_payload())
+    first = client.post(
+        "/auth/bootstrap",
+        json=admin_payload(),
+        headers=bootstrap_secret_header(),
+    )
     second = client.post(
         "/auth/bootstrap",
         json=admin_payload(email="second@silentsepsis.test", staff_id="ADM-002"),
+        headers=bootstrap_secret_header(),
+    )
+
+    assert first.status_code == 201
+    assert second.status_code == 403
+
+
+def test_bootstrap_missing_secret_rejected() -> None:
+    response = client.post("/auth/bootstrap", json=admin_payload())
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Invalid bootstrap secret"
+
+
+def test_bootstrap_incorrect_secret_rejected() -> None:
+    response = client.post(
+        "/auth/bootstrap",
+        json=admin_payload(),
+        headers=bootstrap_secret_header("incorrect-secret"),
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Invalid bootstrap secret"
+
+
+def test_bootstrap_correct_secret_creates_first_admin() -> None:
+    response = client.post(
+        "/auth/bootstrap",
+        json=admin_payload(),
+        headers=bootstrap_secret_header(),
+    )
+
+    assert response.status_code == 201
+    assert response.json()["role"] == "Admin"
+
+
+def test_second_bootstrap_with_correct_secret_still_rejected() -> None:
+    first = client.post(
+        "/auth/bootstrap",
+        json=admin_payload(),
+        headers=bootstrap_secret_header(),
+    )
+    second = client.post(
+        "/auth/bootstrap",
+        json=admin_payload(email="second@silentsepsis.test", staff_id="ADM-002"),
+        headers=bootstrap_secret_header(),
     )
 
     assert first.status_code == 201

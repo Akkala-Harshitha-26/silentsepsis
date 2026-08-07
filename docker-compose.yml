@@ -12,6 +12,7 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/silentsepsis
       REDIS_URL: redis://redis:6379/0
+      BOOTSTRAP_SECRET: change-me-in-production
 
   db:
     image: postgres:16

@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_role
+from app.core.config import settings
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import AdminCreateUser, Token, UserOut
@@ -34,11 +35,32 @@ def _map_create_error(error: Exception) -> HTTPException:
     )
 
 
-@router.post("/bootstrap", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/bootstrap",
+    response_model=UserOut,
+    status_code=status.HTTP_201_CREATED,
+    openapi_extra={
+        "parameters": [
+            {
+                "name": "X-Bootstrap-Secret",
+                "in": "header",
+                "required": True,
+                "schema": {"type": "string"},
+            }
+        ]
+    },
+)
 def bootstrap_admin(
     payload: AdminCreateUser,
+    x_bootstrap_secret: str | None = Header(default=None, include_in_schema=False),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
+    if x_bootstrap_secret != settings.bootstrap_secret:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid bootstrap secret",
+        )
+
     try:
         user = auth_service.bootstrap_admin(db, payload)
     except (
