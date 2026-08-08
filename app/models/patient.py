@@ -48,6 +48,7 @@ class Patient(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=True,
     )
     diagnosis: Mapped[str | None] = mapped_column(Text, nullable=True)
+    bed_number: Mapped[str] = mapped_column(String(40), nullable=False)
     ward_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("wards.id", ondelete="RESTRICT"),

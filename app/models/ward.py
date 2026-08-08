@@ -14,6 +14,7 @@ class Ward(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=False,
     )
     department: Mapped[str] = mapped_column(String(120), index=True, nullable=False)
+    capacity: Mapped[int] = mapped_column(Integer, nullable=False)
     floor: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     patients: Mapped[list["Patient"]] = relationship(back_populates="ward")
