@@ -20,6 +20,12 @@ class VitalReading(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         index=True,
         nullable=False,
     )
+    recorded_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        index=True,
+        nullable=True,
+    )
     heart_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
     systolic_bp: Mapped[float | None] = mapped_column(Float, nullable=True)
     diastolic_bp: Mapped[float | None] = mapped_column(Float, nullable=True)
